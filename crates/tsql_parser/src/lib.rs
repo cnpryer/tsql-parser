@@ -115,12 +115,7 @@ impl Lexer<'_> {
     }
 
     fn lex_ascii(&mut self) -> Token {
-        if self
-            .source
-            .chars()
-            .nth(self.cursor)
-            .is_some_and(char::is_numeric)
-        {
+        if self.current().is_some_and(char::is_numeric) {
             return self.lex_number();
         }
 
@@ -183,7 +178,7 @@ impl Lexer<'_> {
 
         let mut has_decimal_point = false;
 
-        while let Some(ch) = self.source.chars().nth(self.cursor) {
+        while let Some(ch) = self.current() {
             if ch.is_numeric() {
                 self.advance(1);
             } else if ch == '.' {

@@ -51,7 +51,18 @@ impl Lexer<'_> {
     fn next_token(&mut self) -> Option<Token> {
         self.skip_whitespace();
 
-        match self.source.chars().nth(self.cursor) {
+        match self.current() {
+            Some('-') => {
+                if self.peak().is_some_and(char::is_whitespace) {
+                    self.cursor += 1;
+                    Some(Token {
+                        kind: TokenKind::Minus,
+                        value: None,
+                    })
+                } else {
+                    Some(self.lex_number())
+                }
+            }
             Some('=') => {
                 self.cursor += 1;
                 Some(Token {
@@ -79,8 +90,16 @@ impl Lexer<'_> {
         }
     }
 
+    fn current(&self) -> Option<char> {
+        self.source.chars().nth(self.cursor)
+    }
+
+    fn peak(&self) -> Option<char> {
+        self.source.chars().nth(self.cursor + 1)
+    }
+
     fn skip_whitespace(&mut self) {
-        while let Some(ch) = self.source.chars().nth(self.cursor) {
+        while let Some(ch) = self.current() {
             if ch.is_whitespace() {
                 self.cursor += 1;
             } else {
@@ -101,7 +120,7 @@ impl Lexer<'_> {
 
         let start = self.cursor;
 
-        while let Some(ch) = self.source.chars().nth(self.cursor) {
+        while let Some(ch) = self.current() {
             if ch.is_whitespace() | !ch.is_ascii() {
                 break;
             } else {
@@ -152,6 +171,10 @@ impl Lexer<'_> {
     fn lex_number(&mut self) -> Token {
         let start = self.cursor;
 
+        if self.current().is_some_and(|it| matches!(it, '-' | '+')) {
+            self.cursor += 1
+        }
+
         let mut has_decimal_point = false;
 
         while let Some(ch) = self.source.chars().nth(self.cursor) {
@@ -180,7 +203,7 @@ impl Lexer<'_> {
             Token {
                 kind: TokenKind::Int,
                 value: Some(TokenValue::Number(Number::Int(
-                    u32::from_str(&self.source[start..self.cursor]).expect("u32 from str"),
+                    i64::from_str(&self.source[start..self.cursor]).expect("i64 from str"),
                 ))),
             }
         }
@@ -209,6 +232,7 @@ enum TokenKind {
     Int,
     And,
     Eq,
+    Minus,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -219,7 +243,7 @@ enum TokenValue {
 
 #[derive(Debug, Clone, PartialEq)]
 enum Number {
-    Int(u32),
+    Int(i64),
     Float(f64),
 }
 
@@ -239,7 +263,7 @@ impl Ord for Number {
 
 #[test]
 fn test_parser_works() {
-    let source = "select * from word where column is null and another_word = 0.1;";
+    let source = "select * from word where column is null and another_word = -0.1;";
     let mut parser = Parser::new(source);
 
     let tokens = parser.parse();
@@ -293,7 +317,7 @@ fn test_parser_works() {
             },
             Token {
                 kind: TokenKind::Float,
-                value: Some(TokenValue::Number(Number::Float(0.1))),
+                value: Some(TokenValue::Number(Number::Float(-0.1))),
             },
             Token {
                 kind: TokenKind::Semicolon,

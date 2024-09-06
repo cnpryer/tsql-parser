@@ -1,0 +1,19 @@
+name: Spell Check CI
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
+
+jobs:
+  typos:
+      name: Spell check
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+        - uses: crate-ci/typos@master
+          with:
+            files: .

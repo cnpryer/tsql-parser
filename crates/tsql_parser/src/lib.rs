@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, str::FromStr};
 
 /// An experimental TSQL [`Parser`].
 ///
@@ -41,11 +41,17 @@ impl Parser<'_> {
 struct Lexer<'src> {
     source: &'src str,
     cursor: usize,
+
+    prev_cursor: usize,
 }
 
 impl Lexer<'_> {
     fn new(source: &str) -> Lexer {
-        Lexer { source, cursor: 0 }
+        Lexer {
+            source,
+            cursor: 0,
+            prev_cursor: 0,
+        }
     }
 
     fn next_token(&mut self) -> Option<Token> {
@@ -54,7 +60,7 @@ impl Lexer<'_> {
         match self.current() {
             Some('\'') => Some(self.lex_string()),
             Some('-') => {
-                if self.peak().is_some_and(char::is_whitespace) {
+                if self.peek().is_some_and(char::is_whitespace) {
                     self.advance(1);
                     Some(Token {
                         kind: TokenKind::Minus,
@@ -85,7 +91,72 @@ impl Lexer<'_> {
                     value: None,
                 })
             }
-            Some(ch) if ch.is_ascii() => Some(self.lex_ascii()),
+            Some('!') => {
+                if self.peek().is_some_and(|it| it == '=') {
+                    self.advance(2);
+                    Some(Token {
+                        kind: TokenKind::NotEq,
+                        value: None,
+                    })
+                } else {
+                    unimplemented!()
+                }
+            }
+            Some('<') => {
+                if self.peek().is_some_and(|it| it == '=') {
+                    self.advance(2);
+                    Some(Token {
+                        kind: TokenKind::LessThanEq,
+                        value: None,
+                    })
+                } else if self.peek().is_some_and(char::is_whitespace) {
+                    self.advance(1);
+                    Some(Token {
+                        kind: TokenKind::LessThan,
+                        value: None,
+                    })
+                } else {
+                    unimplemented!()
+                }
+            }
+            Some('>') => {
+                if self.peek().is_some_and(|it| it == '=') {
+                    self.advance(2);
+                    Some(Token {
+                        kind: TokenKind::GreaterThanEq,
+                        value: None,
+                    })
+                } else if self.peek().is_some_and(char::is_whitespace) {
+                    self.advance(1);
+                    Some(Token {
+                        kind: TokenKind::GreaterThan,
+                        value: None,
+                    })
+                } else {
+                    unimplemented!()
+                }
+            }
+            Some('[') => {
+                self.advance(1);
+                Some(Token {
+                    kind: TokenKind::LeftSqBracket,
+                    value: None,
+                })
+            }
+            Some(']') => {
+                self.advance(1);
+                Some(Token {
+                    kind: TokenKind::RightSqBracket,
+                    value: None,
+                })
+            }
+            Some(ch) if ch.is_ascii() => {
+                if self.prev() == '[' {
+                    Some(self.lex_ascii_until(']'))
+                } else {
+                    Some(self.lex_ascii())
+                }
+            }
             Some(_) => unimplemented!(),
             None => None,
         }
@@ -95,12 +166,20 @@ impl Lexer<'_> {
         self.source.chars().nth(self.cursor)
     }
 
-    fn peak(&self) -> Option<char> {
+    fn peek(&self) -> Option<char> {
         self.source.chars().nth(self.cursor + 1)
+    }
+
+    fn prev(&self) -> char {
+        self.source
+            .chars()
+            .nth(self.prev_cursor)
+            .expect("cursor starts at zero")
     }
 
     /// Advance the cursor by some `n` positions.
     fn advance(&mut self, n: usize) {
+        self.prev_cursor = self.cursor;
         self.cursor += n
     }
 
@@ -122,51 +201,28 @@ impl Lexer<'_> {
         let start = self.cursor;
 
         while let Some(ch) = self.current() {
-            if ch.is_whitespace() | !ch.is_ascii() {
+            if ch.is_whitespace() || !ch.is_ascii() {
                 break;
             } else {
                 self.advance(1);
             }
         }
 
-        match &self.source[start..self.cursor] {
-            "select" => Token {
-                kind: TokenKind::Select,
-                value: None,
-            },
-            "from" => Token {
-                kind: TokenKind::From,
-                value: None,
-            },
-            "table" => Token {
-                kind: TokenKind::Table,
-                value: None,
-            },
-            "where" => Token {
-                kind: TokenKind::Where,
-                value: None,
-            },
-            "column" => Token {
-                kind: TokenKind::Column,
-                value: None,
-            },
-            "is" => Token {
-                kind: TokenKind::Is,
-                value: None,
-            },
-            "null" => Token {
-                kind: TokenKind::Null,
-                value: None,
-            },
-            "and" => Token {
-                kind: TokenKind::And,
-                value: None,
-            },
-            word => Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word(word.into())),
-            },
+        Token::keyword_or_word(&self.source[start..self.cursor])
+    }
+
+    fn lex_ascii_until(&mut self, c: char) -> Token {
+        let start = self.cursor;
+
+        while let Some(ch) = self.current() {
+            if ch.is_whitespace() || !ch.is_ascii() || ch == c {
+                break;
+            } else {
+                self.advance(1);
+            }
         }
+
+        Token::keyword_or_word(&self.source[start..self.cursor])
     }
 
     fn lex_number(&mut self) -> Token {
@@ -246,6 +302,49 @@ struct Token {
     value: Option<TokenValue>,
 }
 
+impl Token {
+    fn keyword_or_word(s: &str) -> Token {
+        match s {
+            "select" => Token {
+                kind: TokenKind::Select,
+                value: None,
+            },
+            "from" => Token {
+                kind: TokenKind::From,
+                value: None,
+            },
+            "table" => Token {
+                kind: TokenKind::Table,
+                value: None,
+            },
+            "where" => Token {
+                kind: TokenKind::Where,
+                value: None,
+            },
+            "column" => Token {
+                kind: TokenKind::Column,
+                value: None,
+            },
+            "is" => Token {
+                kind: TokenKind::Is,
+                value: None,
+            },
+            "null" => Token {
+                kind: TokenKind::Null,
+                value: None,
+            },
+            "and" => Token {
+                kind: TokenKind::And,
+                value: None,
+            },
+            word => Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word(word.into())),
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TokenKind {
     Word,
@@ -264,6 +363,13 @@ enum TokenKind {
     Eq,
     Minus,
     String,
+    LessThan,
+    LessThanEq,
+    GreaterThan,
+    GreaterThanEq,
+    LeftSqBracket,
+    RightSqBracket,
+    NotEq,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -289,7 +395,7 @@ impl Ord for TokenValue {
 }
 
 #[test]
-fn test_parser_works() {
+fn test_basic_syntax_1() {
     let source = "select * from word where column = 'string' and another_word = -0.1;";
     let mut parser = Parser::new(source);
 
@@ -349,6 +455,154 @@ fn test_parser_works() {
             Token {
                 kind: TokenKind::Semicolon,
                 value: None,
+            },
+        ]
+    );
+}
+
+#[test]
+fn test_basic_syntax_2() {
+    let source = "select * from [word] where [col] != 5";
+    let mut parser = Parser::new(source);
+
+    let tokens = parser.parse();
+
+    assert_eq!(
+        tokens,
+        vec![
+            Token {
+                kind: TokenKind::Select,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Star,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::From,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::LeftSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word("word".into())),
+            },
+            Token {
+                kind: TokenKind::RightSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Where,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::LeftSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word("col".into())),
+            },
+            Token {
+                kind: TokenKind::RightSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::NotEq,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Int,
+                value: Some(TokenValue::Int(5)),
+            },
+        ]
+    );
+}
+
+#[test]
+fn test_basic_syntax_3() {
+    let source = "select * from [word] where [col] >= 5 and [col] < 100.2";
+    let mut parser = Parser::new(source);
+
+    let tokens = parser.parse();
+
+    assert_eq!(
+        tokens,
+        vec![
+            Token {
+                kind: TokenKind::Select,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Star,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::From,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::LeftSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word("word".into())),
+            },
+            Token {
+                kind: TokenKind::RightSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Where,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::LeftSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word("col".into())),
+            },
+            Token {
+                kind: TokenKind::RightSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::GreaterThanEq,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Int,
+                value: Some(TokenValue::Int(5)),
+            },
+            Token {
+                kind: TokenKind::And,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::LeftSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word("col".into())),
+            },
+            Token {
+                kind: TokenKind::RightSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::LessThan,
+                value: None
+            },
+            Token {
+                kind: TokenKind::Float,
+                value: Some(TokenValue::Float(100.2)),
             },
         ]
     );

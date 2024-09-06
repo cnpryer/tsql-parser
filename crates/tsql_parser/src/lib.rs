@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, str::FromStr};
+use std::cmp::Ordering;
 
 /// An experimental TSQL [`Parser`].
 ///
@@ -61,95 +61,41 @@ impl Lexer<'_> {
             Some('\'') => Some(self.lex_string()),
             Some('-') => {
                 if self.peek().is_some_and(char::is_whitespace) {
-                    self.advance(1);
-                    Some(Token {
-                        kind: TokenKind::Minus,
-                        value: None,
-                    })
+                    Some(self.eat(TokenKind::Minus))
                 } else {
                     Some(self.lex_number())
                 }
             }
-            Some('=') => {
-                self.advance(1);
-                Some(Token {
-                    kind: TokenKind::Eq,
-                    value: None,
-                })
-            }
-            Some('*') => {
-                self.advance(1);
-                Some(Token {
-                    kind: TokenKind::Star,
-                    value: None,
-                })
-            }
-            Some(';') => {
-                self.advance(1);
-                Some(Token {
-                    kind: TokenKind::Semicolon,
-                    value: None,
-                })
-            }
+            Some('=') => Some(self.eat(TokenKind::Eq)),
+            Some('*') => Some(self.eat(TokenKind::Star)),
+            Some(';') => Some(self.eat(TokenKind::Semicolon)),
             Some('!') => {
                 if self.peek().is_some_and(|it| it == '=') {
-                    self.advance(2);
-                    Some(Token {
-                        kind: TokenKind::NotEq,
-                        value: None,
-                    })
+                    Some(self.eat(TokenKind::NotEq))
                 } else {
                     unimplemented!()
                 }
             }
             Some('<') => {
                 if self.peek().is_some_and(|it| it == '=') {
-                    self.advance(2);
-                    Some(Token {
-                        kind: TokenKind::LessThanEq,
-                        value: None,
-                    })
+                    Some(self.eat(TokenKind::LessThanEq))
                 } else if self.peek().is_some_and(char::is_whitespace) {
-                    self.advance(1);
-                    Some(Token {
-                        kind: TokenKind::LessThan,
-                        value: None,
-                    })
+                    Some(self.eat(TokenKind::LessThan))
                 } else {
                     unimplemented!()
                 }
             }
             Some('>') => {
                 if self.peek().is_some_and(|it| it == '=') {
-                    self.advance(2);
-                    Some(Token {
-                        kind: TokenKind::GreaterThanEq,
-                        value: None,
-                    })
+                    Some(self.eat(TokenKind::GreaterThanEq))
                 } else if self.peek().is_some_and(char::is_whitespace) {
-                    self.advance(1);
-                    Some(Token {
-                        kind: TokenKind::GreaterThan,
-                        value: None,
-                    })
+                    Some(self.eat(TokenKind::GreaterThan))
                 } else {
                     unimplemented!()
                 }
             }
-            Some('[') => {
-                self.advance(1);
-                Some(Token {
-                    kind: TokenKind::LeftSqBracket,
-                    value: None,
-                })
-            }
-            Some(']') => {
-                self.advance(1);
-                Some(Token {
-                    kind: TokenKind::RightSqBracket,
-                    value: None,
-                })
-            }
+            Some('[') => Some(self.eat(TokenKind::LeftSqBracket)),
+            Some(']') => Some(self.eat(TokenKind::RightSqBracket)),
             Some(ch) if ch.is_ascii() => {
                 if self.prev() == '[' {
                     Some(self.lex_ascii_until(']'))
@@ -175,6 +121,23 @@ impl Lexer<'_> {
             .chars()
             .nth(self.prev_cursor)
             .expect("cursor starts at zero")
+    }
+
+    fn eat(&mut self, kind: TokenKind) -> Token {
+        match kind {
+            TokenKind::Star
+            | TokenKind::Semicolon
+            | TokenKind::Eq
+            | TokenKind::Minus
+            | TokenKind::LessThan
+            | TokenKind::GreaterThan
+            | TokenKind::LeftSqBracket
+            | TokenKind::RightSqBracket => self.advance(1),
+            TokenKind::LessThanEq | TokenKind::GreaterThanEq | TokenKind::NotEq => self.advance(2),
+            _ => panic!("cannot eat kind"),
+        }
+
+        Token { kind, value: None }
     }
 
     /// Advance the cursor by some `n` positions.

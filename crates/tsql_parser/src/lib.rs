@@ -171,7 +171,7 @@ impl Lexer<'_> {
             }
         }
 
-        Token::keyword_or_word(&self.source[start..self.cursor])
+        keyword_or_word_token(&self.source[start..self.cursor])
     }
 
     fn lex_ascii_until(&mut self, c: char) -> Token {
@@ -185,7 +185,7 @@ impl Lexer<'_> {
             }
         }
 
-        Token::keyword_or_word(&self.source[start..self.cursor])
+        keyword_or_word_token(&self.source[start..self.cursor])
     }
 
     fn lex_number(&mut self) -> Token {
@@ -259,53 +259,51 @@ impl Lexer<'_> {
     }
 }
 
+fn keyword_or_word_token(s: &str) -> Token {
+    match s {
+        "select" => Token {
+            kind: TokenKind::Select,
+            value: None,
+        },
+        "from" => Token {
+            kind: TokenKind::From,
+            value: None,
+        },
+        "table" => Token {
+            kind: TokenKind::Table,
+            value: None,
+        },
+        "where" => Token {
+            kind: TokenKind::Where,
+            value: None,
+        },
+        "column" => Token {
+            kind: TokenKind::Column,
+            value: None,
+        },
+        "is" => Token {
+            kind: TokenKind::Is,
+            value: None,
+        },
+        "null" => Token {
+            kind: TokenKind::Null,
+            value: None,
+        },
+        "and" => Token {
+            kind: TokenKind::And,
+            value: None,
+        },
+        word => Token {
+            kind: TokenKind::Word,
+            value: Some(TokenValue::Word(word.into())),
+        },
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Token {
     kind: TokenKind,
     value: Option<TokenValue>,
-}
-
-impl Token {
-    fn keyword_or_word(s: &str) -> Token {
-        match s {
-            "select" => Token {
-                kind: TokenKind::Select,
-                value: None,
-            },
-            "from" => Token {
-                kind: TokenKind::From,
-                value: None,
-            },
-            "table" => Token {
-                kind: TokenKind::Table,
-                value: None,
-            },
-            "where" => Token {
-                kind: TokenKind::Where,
-                value: None,
-            },
-            "column" => Token {
-                kind: TokenKind::Column,
-                value: None,
-            },
-            "is" => Token {
-                kind: TokenKind::Is,
-                value: None,
-            },
-            "null" => Token {
-                kind: TokenKind::Null,
-                value: None,
-            },
-            "and" => Token {
-                kind: TokenKind::And,
-                value: None,
-            },
-            word => Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word(word.into())),
-            },
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

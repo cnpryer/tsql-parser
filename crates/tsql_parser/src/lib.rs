@@ -195,16 +195,20 @@ impl Lexer<'_> {
         if has_decimal_point {
             Token {
                 kind: TokenKind::Float,
-                value: Some(TokenValue::Number(Number::Float(
-                    f64::from_str(&self.source[start..self.cursor]).expect("f64 from str"),
-                ))),
+                value: Some(TokenValue::Float(
+                    self.source[start..self.cursor]
+                        .parse::<f64>()
+                        .expect("f64 from str"),
+                )),
             }
         } else {
             Token {
                 kind: TokenKind::Int,
-                value: Some(TokenValue::Number(Number::Int(
-                    i64::from_str(&self.source[start..self.cursor]).expect("i64 from str"),
-                ))),
+                value: Some(TokenValue::Int(
+                    self.source[start..self.cursor]
+                        .parse::<i64>()
+                        .expect("i64 from str"),
+                )),
             }
         }
     }
@@ -235,27 +239,22 @@ enum TokenKind {
     Minus,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 enum TokenValue {
     Word(Box<str>),
-    Number(Number),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-enum Number {
     Int(i64),
     Float(f64),
 }
 
-impl Eq for Number {}
+impl Eq for TokenValue {}
 
-impl PartialOrd for Number {
+impl PartialOrd for TokenValue {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Number {
+impl Ord for TokenValue {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap_or(Ordering::Equal)
     }
@@ -317,7 +316,7 @@ fn test_parser_works() {
             },
             Token {
                 kind: TokenKind::Float,
-                value: Some(TokenValue::Number(Number::Float(-0.1))),
+                value: Some(TokenValue::Float(-0.1)),
             },
             Token {
                 kind: TokenKind::Semicolon,

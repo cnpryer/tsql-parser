@@ -100,6 +100,18 @@ impl Lexer<'_> {
             "table" => Token {
                 kind: TokenKind::Table,
             },
+            "where" => Token {
+                kind: TokenKind::Where,
+            },
+            "column" => Token {
+                kind: TokenKind::Column,
+            },
+            "is" => Token {
+                kind: TokenKind::Is,
+            },
+            "null" => Token {
+                kind: TokenKind::Null,
+            },
             _ => unimplemented!(),
         }
     }
@@ -116,12 +128,16 @@ enum TokenKind {
     From,
     Table,
     Star,
+    Where,
+    Column,
+    Is,
+    Null,
     Semicolon,
 }
 
 #[test]
 fn test_parser_works() {
-    let source = "select * from table;";
+    let source = "select * from table where column is null;";
     let mut parser = Parser::new(source);
 
     let tokens = parser.parse();
@@ -140,6 +156,18 @@ fn test_parser_works() {
             },
             Token {
                 kind: TokenKind::Table
+            },
+            Token {
+                kind: TokenKind::Where
+            },
+            Token {
+                kind: TokenKind::Column
+            },
+            Token {
+                kind: TokenKind::Is
+            },
+            Token {
+                kind: TokenKind::Null
             },
             Token {
                 kind: TokenKind::Semicolon

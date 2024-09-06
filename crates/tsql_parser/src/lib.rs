@@ -73,7 +73,7 @@ impl Lexer<'_> {
                     value: None,
                 })
             }
-            Some(ch) if ch.is_ascii() => Some(self.parse_ascii()),
+            Some(ch) if ch.is_ascii() => Some(self.lex_ascii()),
             Some(_) => unimplemented!(),
             None => None,
         }
@@ -89,15 +89,14 @@ impl Lexer<'_> {
         }
     }
 
-    /// Parse ascii as a [`Token`].
-    fn parse_ascii(&mut self) -> Token {
+    fn lex_ascii(&mut self) -> Token {
         if self
             .source
             .chars()
             .nth(self.cursor)
             .is_some_and(|it| it.is_numeric())
         {
-            return self.parse_number();
+            return self.lex_number();
         }
 
         let start = self.cursor;
@@ -150,7 +149,7 @@ impl Lexer<'_> {
         }
     }
 
-    fn parse_number(&mut self) -> Token {
+    fn lex_number(&mut self) -> Token {
         let start = self.cursor;
 
         let mut has_decimal_point = false;

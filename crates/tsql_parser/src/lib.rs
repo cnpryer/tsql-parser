@@ -1,3 +1,5 @@
+use std::{cmp::Ordering, str::FromStr};
+
 /// An experimental TSQL [`Parser`].
 ///
 /// I've had trouble finding a good TSQL formatter for my team. I enjoyed contributing to [Ruff], so I've been interested in
@@ -50,7 +52,13 @@ impl Lexer<'_> {
         self.skip_whitespace();
 
         match self.source.chars().nth(self.cursor) {
-            Some(ch) if ch.is_ascii_alphabetic() => Some(self.parse_word_or_keyword()),
+            Some('=') => {
+                self.cursor += 1;
+                Some(Token {
+                    kind: TokenKind::Eq,
+                    value: None,
+                })
+            }
             Some('*') => {
                 self.cursor += 1;
                 Some(Token {
@@ -65,6 +73,7 @@ impl Lexer<'_> {
                     value: None,
                 })
             }
+            Some(ch) if ch.is_ascii() => Some(self.parse_ascii()),
             Some(_) => unimplemented!(),
             None => None,
         }
@@ -80,15 +89,24 @@ impl Lexer<'_> {
         }
     }
 
-    /// Parse a word or a keyword as a [`Token`].
-    fn parse_word_or_keyword(&mut self) -> Token {
+    /// Parse ascii as a [`Token`].
+    fn parse_ascii(&mut self) -> Token {
+        if self
+            .source
+            .chars()
+            .nth(self.cursor)
+            .is_some_and(|it| it.is_numeric())
+        {
+            return self.parse_number();
+        }
+
         let start = self.cursor;
 
         while let Some(ch) = self.source.chars().nth(self.cursor) {
-            if ch.is_ascii_alphanumeric() {
-                self.cursor += 1;
-            } else {
+            if ch.is_whitespace() | !ch.is_ascii() {
                 break;
+            } else {
+                self.cursor += 1;
             }
         }
 
@@ -121,10 +139,51 @@ impl Lexer<'_> {
                 kind: TokenKind::Null,
                 value: None,
             },
+            "and" => Token {
+                kind: TokenKind::And,
+                value: None,
+            },
             word => Token {
                 kind: TokenKind::Word,
                 value: Some(TokenValue::Word(word.into())),
             },
+        }
+    }
+
+    fn parse_number(&mut self) -> Token {
+        let start = self.cursor;
+
+        let mut has_decimal_point = false;
+
+        while let Some(ch) = self.source.chars().nth(self.cursor) {
+            if ch.is_numeric() {
+                self.cursor += 1;
+            } else if ch == '.' {
+                if !has_decimal_point {
+                    has_decimal_point = true;
+                    self.cursor += 1;
+                } else {
+                    unimplemented!()
+                }
+            } else {
+                break;
+            }
+        }
+
+        if has_decimal_point {
+            Token {
+                kind: TokenKind::Float,
+                value: Some(TokenValue::Number(Number::Float(
+                    f64::from_str(&self.source[start..self.cursor]).expect("f64 from str"),
+                ))),
+            }
+        } else {
+            Token {
+                kind: TokenKind::Int,
+                value: Some(TokenValue::Number(Number::Int(
+                    u32::from_str(&self.source[start..self.cursor]).expect("u32 from str"),
+                ))),
+            }
         }
     }
 }
@@ -147,16 +206,41 @@ enum TokenKind {
     Is,
     Null,
     Semicolon,
+    Float,
+    Int,
+    And,
+    Eq,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum TokenValue {
     Word(Box<str>),
+    Number(Number),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum Number {
+    Int(u32),
+    Float(f64),
+}
+
+impl Eq for Number {}
+
+impl PartialOrd for Number {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Number {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+    }
 }
 
 #[test]
 fn test_parser_works() {
-    let source = "select * from word where column is null;";
+    let source = "select * from word where column is null and another_word = 0.1;";
     let mut parser = Parser::new(source);
 
     let tokens = parser.parse();
@@ -195,6 +279,22 @@ fn test_parser_works() {
             Token {
                 kind: TokenKind::Null,
                 value: None,
+            },
+            Token {
+                kind: TokenKind::And,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word("another_word".into())),
+            },
+            Token {
+                kind: TokenKind::Eq,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Float,
+                value: Some(TokenValue::Number(Number::Float(0.1))),
             },
             Token {
                 kind: TokenKind::Semicolon,

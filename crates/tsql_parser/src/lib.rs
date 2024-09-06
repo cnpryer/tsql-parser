@@ -94,7 +94,7 @@ impl Lexer<'_> {
             .source
             .chars()
             .nth(self.cursor)
-            .is_some_and(|it| it.is_numeric())
+            .is_some_and(char::is_numeric)
         {
             return self.lex_number();
         }

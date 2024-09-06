@@ -50,17 +50,19 @@ impl Lexer<'_> {
         self.skip_whitespace();
 
         match self.source.chars().nth(self.cursor) {
-            Some(ch) if ch.is_ascii_alphabetic() => Some(self.parse_keyword()),
+            Some(ch) if ch.is_ascii_alphabetic() => Some(self.parse_word_or_keyword()),
             Some('*') => {
                 self.cursor += 1;
                 Some(Token {
                     kind: TokenKind::Star,
+                    value: None,
                 })
             }
             Some(';') => {
                 self.cursor += 1;
                 Some(Token {
                     kind: TokenKind::Semicolon,
+                    value: None,
                 })
             }
             Some(_) => unimplemented!(),
@@ -78,8 +80,8 @@ impl Lexer<'_> {
         }
     }
 
-    /// Parse a keyword as [`Token`].
-    fn parse_keyword(&mut self) -> Token {
+    /// Parse a word or a keyword as a [`Token`].
+    fn parse_word_or_keyword(&mut self) -> Token {
         let start = self.cursor;
 
         while let Some(ch) = self.source.chars().nth(self.cursor) {
@@ -93,26 +95,36 @@ impl Lexer<'_> {
         match &self.source[start..self.cursor] {
             "select" => Token {
                 kind: TokenKind::Select,
+                value: None,
             },
             "from" => Token {
                 kind: TokenKind::From,
+                value: None,
             },
             "table" => Token {
                 kind: TokenKind::Table,
+                value: None,
             },
             "where" => Token {
                 kind: TokenKind::Where,
+                value: None,
             },
             "column" => Token {
                 kind: TokenKind::Column,
+                value: None,
             },
             "is" => Token {
                 kind: TokenKind::Is,
+                value: None,
             },
             "null" => Token {
                 kind: TokenKind::Null,
+                value: None,
             },
-            _ => unimplemented!(),
+            word => Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word(word.into())),
+            },
         }
     }
 }
@@ -120,10 +132,12 @@ impl Lexer<'_> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Token {
     kind: TokenKind,
+    value: Option<TokenValue>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TokenKind {
+    Word,
     Select,
     From,
     Table,
@@ -135,9 +149,14 @@ enum TokenKind {
     Semicolon,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum TokenValue {
+    Word(Box<str>),
+}
+
 #[test]
 fn test_parser_works() {
-    let source = "select * from table where column is null;";
+    let source = "select * from word where column is null;";
     let mut parser = Parser::new(source);
 
     let tokens = parser.parse();
@@ -146,31 +165,40 @@ fn test_parser_works() {
         tokens,
         vec![
             Token {
-                kind: TokenKind::Select
+                kind: TokenKind::Select,
+                value: None,
             },
             Token {
-                kind: TokenKind::Star
+                kind: TokenKind::Star,
+                value: None,
             },
             Token {
-                kind: TokenKind::From
+                kind: TokenKind::From,
+                value: None,
             },
             Token {
-                kind: TokenKind::Table
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word("word".into())),
             },
             Token {
-                kind: TokenKind::Where
+                kind: TokenKind::Where,
+                value: None,
             },
             Token {
-                kind: TokenKind::Column
+                kind: TokenKind::Column,
+                value: None,
             },
             Token {
-                kind: TokenKind::Is
+                kind: TokenKind::Is,
+                value: None,
             },
             Token {
-                kind: TokenKind::Null
+                kind: TokenKind::Null,
+                value: None,
             },
             Token {
-                kind: TokenKind::Semicolon
+                kind: TokenKind::Semicolon,
+                value: None,
             },
         ]
     );

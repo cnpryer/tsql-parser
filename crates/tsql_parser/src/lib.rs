@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, str::FromStr};
+use std::cmp::Ordering;
 
 /// An experimental TSQL [`Parser`].
 ///
@@ -52,6 +52,7 @@ impl Lexer<'_> {
         self.skip_whitespace();
 
         match self.current() {
+            Some('\'') => Some(self.lex_string()),
             Some('-') => {
                 if self.peak().is_some_and(char::is_whitespace) {
                     self.cursor += 1;
@@ -212,6 +213,31 @@ impl Lexer<'_> {
             }
         }
     }
+
+    fn lex_string(&mut self) -> Token {
+        // Assume current is opening '
+        self.cursor += 1;
+
+        let start = self.cursor;
+
+        while let Some(ch) = self.current() {
+            if ch != '\'' {
+                self.cursor += 1;
+            } else {
+                break;
+            }
+        }
+
+        let end = self.cursor;
+
+        // Skip closing '
+        self.cursor += 1;
+
+        Token {
+            kind: TokenKind::String,
+            value: Some(TokenValue::String(self.source[start..end].into())),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -237,6 +263,7 @@ enum TokenKind {
     And,
     Eq,
     Minus,
+    String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -244,6 +271,7 @@ enum TokenValue {
     Word(Box<str>),
     Int(i64),
     Float(f64),
+    String(Box<str>),
 }
 
 impl Eq for TokenValue {}
@@ -262,7 +290,7 @@ impl Ord for TokenValue {
 
 #[test]
 fn test_parser_works() {
-    let source = "select * from word where column is null and another_word = -0.1;";
+    let source = "select * from word where column = 'string' and another_word = -0.1;";
     let mut parser = Parser::new(source);
 
     let tokens = parser.parse();
@@ -295,12 +323,12 @@ fn test_parser_works() {
                 value: None,
             },
             Token {
-                kind: TokenKind::Is,
+                kind: TokenKind::Eq,
                 value: None,
             },
             Token {
-                kind: TokenKind::Null,
-                value: None,
+                kind: TokenKind::String,
+                value: Some(TokenValue::String("string".into())),
             },
             Token {
                 kind: TokenKind::And,

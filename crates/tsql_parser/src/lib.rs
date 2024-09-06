@@ -55,7 +55,7 @@ impl Lexer<'_> {
             Some('\'') => Some(self.lex_string()),
             Some('-') => {
                 if self.peak().is_some_and(char::is_whitespace) {
-                    self.cursor += 1;
+                    self.advance(1);
                     Some(Token {
                         kind: TokenKind::Minus,
                         value: None,
@@ -65,21 +65,21 @@ impl Lexer<'_> {
                 }
             }
             Some('=') => {
-                self.cursor += 1;
+                self.advance(1);
                 Some(Token {
                     kind: TokenKind::Eq,
                     value: None,
                 })
             }
             Some('*') => {
-                self.cursor += 1;
+                self.advance(1);
                 Some(Token {
                     kind: TokenKind::Star,
                     value: None,
                 })
             }
             Some(';') => {
-                self.cursor += 1;
+                self.advance(1);
                 Some(Token {
                     kind: TokenKind::Semicolon,
                     value: None,
@@ -99,10 +99,15 @@ impl Lexer<'_> {
         self.source.chars().nth(self.cursor + 1)
     }
 
+    /// Advance the cursor by some `n` positions.
+    fn advance(&mut self, n: usize) {
+        self.cursor += n
+    }
+
     fn skip_whitespace(&mut self) {
         while let Some(ch) = self.current() {
             if ch.is_whitespace() {
-                self.cursor += 1;
+                self.advance(1);
             } else {
                 break;
             }
@@ -125,7 +130,7 @@ impl Lexer<'_> {
             if ch.is_whitespace() | !ch.is_ascii() {
                 break;
             } else {
-                self.cursor += 1;
+                self.advance(1);
             }
         }
 
@@ -173,18 +178,18 @@ impl Lexer<'_> {
         let start = self.cursor;
 
         if self.current().is_some_and(|it| matches!(it, '-' | '+')) {
-            self.cursor += 1
+            self.advance(1)
         }
 
         let mut has_decimal_point = false;
 
         while let Some(ch) = self.source.chars().nth(self.cursor) {
             if ch.is_numeric() {
-                self.cursor += 1;
+                self.advance(1);
             } else if ch == '.' {
                 if !has_decimal_point {
                     has_decimal_point = true;
-                    self.cursor += 1;
+                    self.advance(1);
                 } else {
                     unimplemented!()
                 }
@@ -216,13 +221,13 @@ impl Lexer<'_> {
 
     fn lex_string(&mut self) -> Token {
         // Assume current is opening '
-        self.cursor += 1;
+        self.advance(1);
 
         let start = self.cursor;
 
         while let Some(ch) = self.current() {
             if ch != '\'' {
-                self.cursor += 1;
+                self.advance(1);
             } else {
                 break;
             }
@@ -231,7 +236,7 @@ impl Lexer<'_> {
         let end = self.cursor;
 
         // Skip closing '
-        self.cursor += 1;
+        self.advance(1);
 
         Token {
             kind: TokenKind::String,

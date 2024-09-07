@@ -260,43 +260,51 @@ impl Lexer<'_> {
 }
 
 fn keyword_or_word_token(s: &str) -> Token {
-    match s {
-        "select" => Token {
+    if s.eq_ignore_ascii_case("select") {
+        Token {
             kind: TokenKind::Select,
             value: None,
-        },
-        "from" => Token {
+        }
+    } else if s.eq_ignore_ascii_case("from") {
+        Token {
             kind: TokenKind::From,
             value: None,
-        },
-        "table" => Token {
+        }
+    } else if s.eq_ignore_ascii_case("table") {
+        Token {
             kind: TokenKind::Table,
             value: None,
-        },
-        "where" => Token {
+        }
+    } else if s.eq_ignore_ascii_case("where") {
+        Token {
             kind: TokenKind::Where,
             value: None,
-        },
-        "column" => Token {
+        }
+    } else if s.eq_ignore_ascii_case("column") {
+        Token {
             kind: TokenKind::Column,
             value: None,
-        },
-        "is" => Token {
+        }
+    } else if s.eq_ignore_ascii_case("is") {
+        Token {
             kind: TokenKind::Is,
             value: None,
-        },
-        "null" => Token {
+        }
+    } else if s.eq_ignore_ascii_case("null") {
+        Token {
             kind: TokenKind::Null,
             value: None,
-        },
-        "and" => Token {
+        }
+    } else if s.eq_ignore_ascii_case("and") {
+        Token {
             kind: TokenKind::And,
             value: None,
-        },
-        word => Token {
+        }
+    } else {
+        Token {
             kind: TokenKind::Word,
-            value: Some(TokenValue::Word(word.into())),
-        },
+            value: Some(TokenValue::Word(s.into())),
+        }
     }
 }
 
@@ -485,7 +493,7 @@ fn test_basic_syntax_2() {
 
 #[test]
 fn test_basic_syntax_3() {
-    let source = "select * from [word] where [col] >= 5 and [col] < 100.2";
+    let source = "SeLeCt * from [word] where [col] >= 5 and [col] < 100.2";
     let mut parser = Parser::new(source);
 
     let tokens = parser.parse();

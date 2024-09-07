@@ -41,7 +41,6 @@ impl Parser<'_> {
 struct Lexer<'src> {
     source: &'src str,
     cursor: usize,
-
     prev_cursor: usize,
 }
 
@@ -164,7 +163,7 @@ impl Lexer<'_> {
         let start = self.cursor;
 
         while let Some(ch) = self.current() {
-            if ch.is_whitespace() || !ch.is_ascii() {
+            if ch.is_whitespace() || !ch.is_ascii() | is_closing_char(ch) {
                 break;
             } else {
                 self.advance(1);
@@ -257,6 +256,10 @@ impl Lexer<'_> {
             value: Some(TokenValue::String(self.source[start..end].into())),
         }
     }
+}
+
+fn is_closing_char(ch: char) -> bool {
+    matches!(ch, ']' | ';')
 }
 
 fn keyword_or_word_token(s: &str) -> Token {
@@ -364,7 +367,99 @@ impl Ord for TokenValue {
 }
 
 #[test]
-fn test_basic_syntax_1() {
+fn test_simple_select_statement() {
+    let source = "select * from table;";
+    let mut parser = Parser::new(source);
+    let tokens = parser.parse();
+    assert_eq!(
+        tokens,
+        vec![
+            Token {
+                kind: TokenKind::Select,
+                value: None
+            },
+            Token {
+                kind: TokenKind::Star,
+                value: None
+            },
+            Token {
+                kind: TokenKind::From,
+                value: None
+            },
+            Token {
+                kind: TokenKind::Table,
+                value: None
+            },
+            Token {
+                kind: TokenKind::Semicolon,
+                value: None
+            }
+        ]
+    )
+}
+
+#[test]
+fn test_simple_select_where_eq_and_less_than_eq_int() {
+    let source = "select * from table where col1 = 1 and col2 <= 4";
+    let mut parser = Parser::new(source);
+    let tokens = parser.parse();
+    assert_eq!(
+        tokens,
+        vec![
+            Token {
+                kind: TokenKind::Select,
+                value: None
+            },
+            Token {
+                kind: TokenKind::Star,
+                value: None
+            },
+            Token {
+                kind: TokenKind::From,
+                value: None
+            },
+            Token {
+                kind: TokenKind::Table,
+                value: None
+            },
+            Token {
+                kind: TokenKind::Where,
+                value: None
+            },
+            Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word("col1".into()))
+            },
+            Token {
+                kind: TokenKind::Eq,
+                value: None
+            },
+            Token {
+                kind: TokenKind::Int,
+                value: Some(TokenValue::Int(1)),
+            },
+            Token {
+                kind: TokenKind::And,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word("col2".into()))
+            },
+            Token {
+                kind: TokenKind::LessThanEq,
+                value: None
+            },
+            Token {
+                kind: TokenKind::Int,
+                value: Some(TokenValue::Int(4))
+            }
+        ]
+    )
+}
+
+#[test]
+fn test_simple_where_eq_string_and_eq_float() {
     let source = "select * from word where column = 'string' and another_word = -0.1;";
     let mut parser = Parser::new(source);
 
@@ -430,7 +525,7 @@ fn test_basic_syntax_1() {
 }
 
 #[test]
-fn test_basic_syntax_2() {
+fn test_simple_select_where_bracket_not_eq() {
     let source = "select * from [word] where [col] != 5";
     let mut parser = Parser::new(source);
 
@@ -492,7 +587,7 @@ fn test_basic_syntax_2() {
 }
 
 #[test]
-fn test_basic_syntax_3() {
+fn test_simple_select_where_bracket_greater_than_eq_and_bracket_less_than_float() {
     let source = "SeLeCt * from [word] where [col] >= 5 and [col] < 100.2";
     let mut parser = Parser::new(source);
 

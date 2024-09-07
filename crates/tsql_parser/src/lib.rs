@@ -99,7 +99,7 @@ impl Lexer<'_> {
                 if self.prev() == '[' {
                     Some(self.lex_ascii_until(']'))
                 } else {
-                    Some(self.lex_ascii())
+                    Some(self.lex_ascii_until(';'))
                 }
             }
             Some(_) => unimplemented!(),
@@ -155,25 +155,11 @@ impl Lexer<'_> {
         }
     }
 
-    fn lex_ascii(&mut self) -> Token {
+    fn lex_ascii_until(&mut self, c: char) -> Token {
         if self.current().is_some_and(char::is_numeric) {
             return self.lex_number();
         }
 
-        let start = self.cursor;
-
-        while let Some(ch) = self.current() {
-            if ch.is_whitespace() || !ch.is_ascii() | is_closing_char(ch) {
-                break;
-            } else {
-                self.advance(1);
-            }
-        }
-
-        keyword_or_word_token(&self.source[start..self.cursor])
-    }
-
-    fn lex_ascii_until(&mut self, c: char) -> Token {
         let start = self.cursor;
 
         while let Some(ch) = self.current() {

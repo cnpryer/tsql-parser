@@ -147,10 +147,10 @@ impl Lexer<'_> {
 
     fn skip_whitespace(&mut self) {
         while let Some(ch) = self.current() {
-            if ch.is_whitespace() {
-                self.advance(1);
-            } else {
-                break;
+            dbg!(&ch);
+            match ch {
+                ' ' | '\t' | '\\' | '\r' | '\n' => self.advance(ch.len_utf8()),
+                _ => break,
             }
         }
     }
@@ -653,6 +653,67 @@ fn test_simple_select_where_bracket_greater_than_eq_and_bracket_less_than_float(
             Token {
                 kind: TokenKind::Float,
                 value: Some(TokenValue::Float(100.2)),
+            },
+        ]
+    );
+}
+
+#[test]
+fn test_simple_select_where_bracket_greater_than_eq_and_bracket_less_than_float_multi_line() {
+    let source = r#"
+select
+    *
+from
+    [word]
+where
+    col >= 5
+"#;
+    let mut parser = Parser::new(source);
+
+    let tokens = parser.parse();
+
+    assert_eq!(
+        tokens,
+        vec![
+            Token {
+                kind: TokenKind::Select,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Star,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::From,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::LeftSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word("word".into())),
+            },
+            Token {
+                kind: TokenKind::RightSqBracket,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Where,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Word,
+                value: Some(TokenValue::Word("col".into())),
+            },
+            Token {
+                kind: TokenKind::GreaterThanEq,
+                value: None,
+            },
+            Token {
+                kind: TokenKind::Int,
+                value: Some(TokenValue::Int(5)),
             },
         ]
     );

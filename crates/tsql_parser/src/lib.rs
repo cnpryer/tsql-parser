@@ -147,7 +147,6 @@ impl Lexer<'_> {
 
     fn skip_whitespace(&mut self) {
         while let Some(ch) = self.current() {
-            dbg!(&ch);
             match ch {
                 ' ' | '\t' | '\\' | '\r' | '\n' => self.advance(ch.len_utf8()),
                 _ => break,

@@ -2,18 +2,11 @@ use std::cmp::Ordering;
 
 /// An experimental TSQL [`Parser`].
 ///
-/// I've had trouble finding a good TSQL formatter for my team. I enjoyed contributing to [Ruff], so I've been interested in
-/// building a formatter of my own for a while. **This is meant to be experimental and used for learning purposes.**
+/// This [`Parser`] is inspired by [ruff], [sqlparser-rs], and the [Pratt parsing algorithm].
 ///
-/// As with Ruff's parser, I'd like to implement [`Parser`] using the [Pratt parsing algorithm] and optimized to parse TSQL code.
-///
-/// I considered using [sqlparser-rs] as a parser for the formatter, but I don't want to spend time generating code for an
-/// [orphan rule] workaround. I'd rather spend that time writing this parser.
-///
-/// [Ruff]: https://github.com/astral-sh/ruff
-/// [Pratt parsing algorithm]: https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
+/// [ruff]: https://github.com/astral-sh/ruff
 /// [sqlparser-rs]: https://github.com/sqlparser-rs/sqlparser-rs
-/// [orphan rule]: https://doc.rust-lang.org/reference/items/implementations.html#trait-implementation-coherence
+/// [Pratt parsing algorithm]: https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
 struct Parser<'src> {
     source: &'src str,
     lexer: Lexer<'src>,

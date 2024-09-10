@@ -162,7 +162,10 @@ impl Lexer<'_> {
             }
         }
 
-        keyword_or_word_token(&self.source[start..self.cursor])
+        Token {
+            kind: TokenKind::Word,
+            value: Some(TokenValue::Word(self.source[start..self.cursor].into())),
+        }
     }
 
     fn lex_number(&mut self) -> Token {
@@ -236,55 +239,6 @@ impl Lexer<'_> {
     }
 }
 
-fn keyword_or_word_token(s: &str) -> Token {
-    if s.eq_ignore_ascii_case("select") {
-        Token {
-            kind: TokenKind::Select,
-            value: None,
-        }
-    } else if s.eq_ignore_ascii_case("from") {
-        Token {
-            kind: TokenKind::From,
-            value: None,
-        }
-    } else if s.eq_ignore_ascii_case("table") {
-        Token {
-            kind: TokenKind::Table,
-            value: None,
-        }
-    } else if s.eq_ignore_ascii_case("where") {
-        Token {
-            kind: TokenKind::Where,
-            value: None,
-        }
-    } else if s.eq_ignore_ascii_case("column") {
-        Token {
-            kind: TokenKind::Column,
-            value: None,
-        }
-    } else if s.eq_ignore_ascii_case("is") {
-        Token {
-            kind: TokenKind::Is,
-            value: None,
-        }
-    } else if s.eq_ignore_ascii_case("null") {
-        Token {
-            kind: TokenKind::Null,
-            value: None,
-        }
-    } else if s.eq_ignore_ascii_case("and") {
-        Token {
-            kind: TokenKind::And,
-            value: None,
-        }
-    } else {
-        Token {
-            kind: TokenKind::Word,
-            value: Some(TokenValue::Word(s.into())),
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Token {
     kind: TokenKind,
@@ -294,18 +248,10 @@ struct Token {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TokenKind {
     Word,
-    Select,
-    From,
-    Table,
     Star,
-    Where,
-    Column,
-    Is,
-    Null,
     Semicolon,
     Float,
     Int,
-    And,
     Eq,
     Minus,
     String,
@@ -341,368 +287,61 @@ impl Ord for TokenValue {
 }
 
 #[test]
-fn test_simple_select_statement() {
-    let source = "select * from table;";
-    let mut parser = Parser::new(source);
-    let tokens = parser.parse();
-    assert_eq!(
-        tokens,
-        vec![
-            Token {
-                kind: TokenKind::Select,
-                value: None
-            },
-            Token {
-                kind: TokenKind::Star,
-                value: None
-            },
-            Token {
-                kind: TokenKind::From,
-                value: None
-            },
-            Token {
-                kind: TokenKind::Table,
-                value: None
-            },
-            Token {
-                kind: TokenKind::Semicolon,
-                value: None
-            }
-        ]
-    )
-}
+fn test_parse_tokens() {
+    let source = "\n\n\n[word]   \n 1 -1.0 > >= <=\n\n\t< = != \r'string'";
+    let tokens = Parser::new(source).parse();
 
-#[test]
-fn test_simple_select_where_eq_and_less_than_eq_int() {
-    let source = "select * from table where col1 = 1 and col2 <= 4";
-    let mut parser = Parser::new(source);
-    let tokens = parser.parse();
     assert_eq!(
         tokens,
         vec![
             Token {
-                kind: TokenKind::Select,
-                value: None
-            },
-            Token {
-                kind: TokenKind::Star,
-                value: None
-            },
-            Token {
-                kind: TokenKind::From,
-                value: None
-            },
-            Token {
-                kind: TokenKind::Table,
-                value: None
-            },
-            Token {
-                kind: TokenKind::Where,
+                kind: TokenKind::LeftSqBracket,
                 value: None
             },
             Token {
                 kind: TokenKind::Word,
-                value: Some(TokenValue::Word("col1".into()))
+                value: Some(TokenValue::Word("word".into()))
             },
             Token {
-                kind: TokenKind::Eq,
+                kind: TokenKind::RightSqBracket,
                 value: None
             },
             Token {
                 kind: TokenKind::Int,
-                value: Some(TokenValue::Int(1)),
+                value: Some(TokenValue::Int(1))
             },
             Token {
-                kind: TokenKind::And,
-                value: None,
+                kind: TokenKind::Float,
+                value: Some(TokenValue::Float(-1.0))
             },
             Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word("col2".into()))
+                kind: TokenKind::GreaterThan,
+                value: None
+            },
+            Token {
+                kind: TokenKind::GreaterThanEq,
+                value: None
             },
             Token {
                 kind: TokenKind::LessThanEq,
                 value: None
             },
             Token {
-                kind: TokenKind::Int,
-                value: Some(TokenValue::Int(4))
-            }
-        ]
-    )
-}
-
-#[test]
-fn test_simple_where_eq_string_and_eq_float() {
-    let source = "select * from word where column = 'string' and another_word = -0.1;";
-    let mut parser = Parser::new(source);
-
-    let tokens = parser.parse();
-
-    assert_eq!(
-        tokens,
-        vec![
-            Token {
-                kind: TokenKind::Select,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Star,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::From,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word("word".into())),
-            },
-            Token {
-                kind: TokenKind::Where,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Column,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Eq,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::String,
-                value: Some(TokenValue::String("string".into())),
-            },
-            Token {
-                kind: TokenKind::And,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word("another_word".into())),
-            },
-            Token {
-                kind: TokenKind::Eq,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Float,
-                value: Some(TokenValue::Float(-0.1)),
-            },
-            Token {
-                kind: TokenKind::Semicolon,
-                value: None,
-            },
-        ]
-    );
-}
-
-#[test]
-fn test_simple_select_where_bracket_not_eq() {
-    let source = "select * from [word] where [col] != 5";
-    let mut parser = Parser::new(source);
-
-    let tokens = parser.parse();
-
-    assert_eq!(
-        tokens,
-        vec![
-            Token {
-                kind: TokenKind::Select,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Star,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::From,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::LeftSqBracket,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word("word".into())),
-            },
-            Token {
-                kind: TokenKind::RightSqBracket,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Where,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::LeftSqBracket,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word("col".into())),
-            },
-            Token {
-                kind: TokenKind::RightSqBracket,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::NotEq,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Int,
-                value: Some(TokenValue::Int(5)),
-            },
-        ]
-    );
-}
-
-#[test]
-fn test_simple_select_where_bracket_greater_than_eq_and_bracket_less_than_float() {
-    let source = "SeLeCt * from [word] where [col] >= 5 and [col] < 100.2";
-    let mut parser = Parser::new(source);
-
-    let tokens = parser.parse();
-
-    assert_eq!(
-        tokens,
-        vec![
-            Token {
-                kind: TokenKind::Select,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Star,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::From,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::LeftSqBracket,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word("word".into())),
-            },
-            Token {
-                kind: TokenKind::RightSqBracket,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Where,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::LeftSqBracket,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word("col".into())),
-            },
-            Token {
-                kind: TokenKind::RightSqBracket,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::GreaterThanEq,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Int,
-                value: Some(TokenValue::Int(5)),
-            },
-            Token {
-                kind: TokenKind::And,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::LeftSqBracket,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word("col".into())),
-            },
-            Token {
-                kind: TokenKind::RightSqBracket,
-                value: None,
-            },
-            Token {
                 kind: TokenKind::LessThan,
                 value: None
             },
             Token {
-                kind: TokenKind::Float,
-                value: Some(TokenValue::Float(100.2)),
-            },
-        ]
-    );
-}
-
-#[test]
-fn test_simple_select_where_bracket_greater_than_eq_and_bracket_less_than_float_multi_line() {
-    let source = r#"
-select
-    *
-from
-    [word]
-where
-    col >= 5
-"#;
-    let mut parser = Parser::new(source);
-
-    let tokens = parser.parse();
-
-    assert_eq!(
-        tokens,
-        vec![
-            Token {
-                kind: TokenKind::Select,
-                value: None,
+                kind: TokenKind::Eq,
+                value: None
             },
             Token {
-                kind: TokenKind::Star,
-                value: None,
+                kind: TokenKind::NotEq,
+                value: None
             },
             Token {
-                kind: TokenKind::From,
-                value: None,
+                kind: TokenKind::String,
+                value: Some(TokenValue::String("string".into()))
             },
-            Token {
-                kind: TokenKind::LeftSqBracket,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word("word".into())),
-            },
-            Token {
-                kind: TokenKind::RightSqBracket,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Where,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Word,
-                value: Some(TokenValue::Word("col".into())),
-            },
-            Token {
-                kind: TokenKind::GreaterThanEq,
-                value: None,
-            },
-            Token {
-                kind: TokenKind::Int,
-                value: Some(TokenValue::Int(5)),
-            },
-        ]
-    );
+        ],
+    )
 }

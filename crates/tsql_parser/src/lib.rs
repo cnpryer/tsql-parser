@@ -243,10 +243,6 @@ impl Lexer<'_> {
     }
 }
 
-fn is_closing_char(ch: char) -> bool {
-    matches!(ch, ']' | ';')
-}
-
 fn keyword_or_word_token(s: &str) -> Token {
     if s.eq_ignore_ascii_case("select") {
         Token {

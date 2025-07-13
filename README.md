@@ -16,5 +16,5 @@ You can also [start a discussion].
 
 
 [github's "github flow" docs]: https://docs.github.com/en/get-started/using-github/github-flow
-[open an issue]: https://github.com/cnpryer/tsql-parser/issues/new
-[start a discussion]: https://github.com/cnpryer/tsql-parser/discussions/new/choose
+[open an issue]: https://github.com/twin-labs/tsql-parser/issues/new
+[start a discussion]: https://github.com/twin-labs/tsql-parser/discussions/new/choose

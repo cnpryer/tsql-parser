@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::cmp::Ordering;
 
 /// An experimental TSQL [`Parser`].
@@ -24,7 +26,7 @@ impl Parser<'_> {
         let mut tokens = Vec::new();
 
         while let Some(token) = self.lexer.next_token() {
-            tokens.push(token)
+            tokens.push(token);
         }
 
         tokens
@@ -135,7 +137,7 @@ impl Lexer<'_> {
     /// Advance the cursor by some `n` positions.
     fn advance(&mut self, n: usize) {
         self.prev_cursor = self.cursor;
-        self.cursor += n
+        self.cursor += n;
     }
 
     fn skip_whitespace(&mut self) {
@@ -157,9 +159,8 @@ impl Lexer<'_> {
         while let Some(ch) = self.current() {
             if ch.is_whitespace() || !ch.is_ascii() || ch == c {
                 break;
-            } else {
-                self.advance(1);
             }
+            self.advance(1);
         }
 
         Token {
@@ -172,7 +173,7 @@ impl Lexer<'_> {
         let start = self.cursor;
 
         if self.current().is_some_and(|it| matches!(it, '-' | '+')) {
-            self.advance(1)
+            self.advance(1);
         }
 
         let mut has_decimal_point = false;
@@ -181,11 +182,11 @@ impl Lexer<'_> {
             if ch.is_numeric() {
                 self.advance(1);
             } else if ch == '.' {
-                if !has_decimal_point {
+                if has_decimal_point {
+                    unimplemented!()
+                } else {
                     has_decimal_point = true;
                     self.advance(1);
-                } else {
-                    unimplemented!()
                 }
             } else {
                 break;
@@ -220,11 +221,10 @@ impl Lexer<'_> {
         let start = self.cursor;
 
         while let Some(ch) = self.current() {
-            if ch != '\'' {
-                self.advance(1);
-            } else {
+            if ch == '\'' {
                 break;
             }
+            self.advance(1);
         }
 
         let end = self.cursor;
@@ -343,5 +343,5 @@ fn test_parse_tokens() {
                 value: Some(TokenValue::String("string".into()))
             },
         ],
-    )
+    );
 }
